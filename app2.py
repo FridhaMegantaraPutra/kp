@@ -61,7 +61,7 @@ def calculate_statistics(y, sr):
 def main():
     st.title("Audio Classification App")
 
-    audio_bytes = audio_recorder(pause_threshold=2.0, sample_rate=41_000)
+    audio_bytes = audio_recorder(duration=2.0, sample_rate=41_000)
 
     if audio_bytes:
         st.audio(audio_bytes, format="audio/wav")
