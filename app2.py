@@ -55,11 +55,11 @@ def calculate_statistics(y, sr):
 
     return features
 
-
 def main():
     st.title("Audio Classification App")
 
-    audio_bytes = audio_recorder(pause_threshold=2.0, sample_rate=41_000)
+    # Set the duration to 2 seconds
+    audio_bytes = audio_recorder(duration=2.0, sample_rate=41_000)
 
     if audio_bytes:
         st.audio(audio_bytes, format="audio/wav")
@@ -83,3 +83,32 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# def main():
+#     st.title("Audio Classification App")
+
+#     audio_bytes = audio_recorder(pause_threshold=2.0, sample_rate=41_000)
+
+#     if audio_bytes:
+#         st.audio(audio_bytes, format="audio/wav")
+
+#         # Save recorded audio to a temporary WAV file
+#         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_wav:
+#             temp_wav.write(audio_bytes)
+#             temp_wav_path = temp_wav.name
+
+#             # Load the recorded audio file and process it
+#             y, sr = librosa.load(temp_wav_path, sr=None)
+#             statistics = calculate_statistics(y, sr)
+#             df = pd.DataFrame([statistics], columns=columns)
+#             new_data_df = pd.DataFrame(scaler.transform(df))
+
+#             # Perform prediction using the loaded model
+#             prediction = saved_model.predict(new_data_df)
+
+#             st.write("Prediction Result:", prediction)
+
+
+# if __name__ == "__main__":
+#     main()
