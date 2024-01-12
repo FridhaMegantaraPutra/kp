@@ -1,4 +1,5 @@
 import streamlit as st
+from audio_recorder_streamlit import audio_recorder
 import numpy as np
 import librosa
 import noisereduce as nr
@@ -7,8 +8,6 @@ import joblib
 import pickle
 from scipy.stats import kurtosis
 from scipy.stats import skew
-import sounddevice as sd
-import soundfile as sf
 import tempfile
 
 # Load the previously saved StandardScaler object
@@ -17,6 +16,10 @@ scaler = joblib.load('scaler.pkl')
 # Load model from the pickle file
 with open('mlp_model.pkl', 'rb') as model_file:
     saved_model = pickle.load(model_file)
+
+columns = ['ZCR Mean', 'ZCR Median', 'ZCR Std Dev', 'ZCR Kurtosis', 'ZCR Skew',
+           'RMSE', 'RMSE Median', 'RMSE Std Dev', 'RMSE Kurtosis', 'RMSE Skew',
+           'spectral_centroid', 'spectral_bandwidth', 'spectral_rolloff']
 
 
 def calculate_statistics(y, sr):
@@ -53,57 +56,29 @@ def calculate_statistics(y, sr):
     return features
 
 
-columns = ['ZCR Mean', 'ZCR Median', 'ZCR Std Dev', 'ZCR Kurtosis', 'ZCR Skew',
-           'RMSE', 'RMSE Median', 'RMSE Std Dev', 'RMSE Kurtosis', 'RMSE Skew',
-           'spectral_centroid', 'spectral_bandwidth', 'spectral_rolloff']
-
-
-def record_audio(duration=2):
-    st.info("Recording audio... Click 'Stop Recording' after 2 seconds.")
-    audio_data = sd.rec(int(44100 * duration),
-                        samplerate=44100, channels=2, dtype='int16')
-    sd.wait()
-    st.success("Recording complete!")
-    return audio_data
-
-    
-    # Convert sounddevice array to pydub AudioSegment
-    audio_segment = AudioSegment(
-        audio_data.tobytes(),
-        frame_rate=44100,
-        sample_width=audio_data.dtype.itemsize,
-        channels=2
-    )
-    
-    st.success("Recording complete!")
-    return audio_segment
-
-
-
-
-
 def main():
     st.title("Audio Classification App")
 
-    if st.button("Start Recording"):
-        audio_data = record_audio()
-        st.audio(audio_data.tobytes(), format="audio/wav",
-                 start_time=0, sample_rate=44100)
+    audio_bytes = audio_recorder(pause_threshold=2.0, sample_rate=41_000)
+
+    if audio_bytes:
+        st.audio(audio_bytes, format="audio/wav")
 
         # Save recorded audio to a temporary WAV file
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_wav:
-            sf.write(temp_wav.name, audio_data, samplerate=44100)
+            temp_wav.write(audio_bytes)
+            temp_wav_path = temp_wav.name
 
-        # Load the recorded audio file and process it
-        y, sr = librosa.load(temp_wav.name, sr=None)
-        statistics = calculate_statistics(y, sr)
-        df = pd.DataFrame([statistics], columns=columns)
-        new_data_df = pd.DataFrame(scaler.transform(df))
+            # Load the recorded audio file and process it
+            y, sr = librosa.load(temp_wav_path, sr=None)
+            statistics = calculate_statistics(y, sr)
+            df = pd.DataFrame([statistics], columns=columns)
+            new_data_df = pd.DataFrame(scaler.transform(df))
 
-        # Perform prediction using the loaded model
-        prediction = saved_model.predict(new_data_df)
+            # Perform prediction using the loaded model
+            prediction = saved_model.predict(new_data_df)
 
-        st.write("Prediction Result:", prediction)
+            st.write("Prediction Result:", prediction)
 
 
 if __name__ == "__main__":
